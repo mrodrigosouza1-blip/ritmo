@@ -5,11 +5,13 @@ import { getLocale } from '@/src/i18n';
 import { getSetting, setSetting } from '@/src/services/appSettings';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
-import { getStreakCurrent } from '@/src/services/premiumIntelligenceStorage';
+import { getStreakCurrent, getStreakBest } from '@/src/services/premiumIntelligenceStorage';
 import { listGoalsWeekly } from '@/src/services/goalsWeekly';
 import { getWeeklyDoneCountsByCategory } from '@/src/services/goalsProgress';
 import { getWeekRangeISO } from '@/src/utils/weekRange';
-import type { WidgetSnapshot } from '@/src/widgets/widgetSnapshot';
+import { getCategoryById } from '@/src/services/categories';
+import { getCategoryDisplayName } from '@/src/services/categoryDisplay';
+import type { WidgetSnapshot, WeeklyBar, FocusCategoryBar } from '@/src/widgets/widgetSnapshot';
 
 const STORAGE_KEY = 'ritmo_widget_snapshot_v1';
 
@@ -17,6 +19,91 @@ function addDays(iso: string, days: number): string {
   const d = new Date(iso + 'T12:00:00');
   d.setDate(d.getDate() + days);
   return localDayKey(d);
+}
+
+/**
+ * Calcula percentual do dia (done/planned * 100).
+ * Inclui eventos, rotinas (1x sem times, cada slot com times), tarefas.
+ */
+async function getDayProgress(dateIso: string): Promise<{ total: number; done: number }> {
+  const [items, routinesWithTimes] = await Promise.all([
+    generateDayItems(dateIso),
+    getRoutinesWithTimesForDay(dateIso),
+  ]);
+
+  let total = items.length;
+  let done = items.filter((i) => i.status === 'done').length;
+
+  for (const rwt of routinesWithTimes) {
+    for (const drt of rwt.dayRoutineTimes) {
+      total += 1;
+      if (drt.status === 'done') done += 1;
+    }
+  }
+
+  return { total, done };
+}
+
+/**
+ * Constrói 7 barras (Seg–Dom) com percentual por dia.
+ * Se planned=0, percent=0 (barra neutra).
+ */
+export async function buildWeeklyBars(
+  referenceDate: Date
+): Promise<WeeklyBar[]> {
+  const { start, end } = getWeekRangeISO(referenceDate);
+  const bars: WeeklyBar[] = [];
+  const startDate = new Date(start + 'T12:00:00');
+
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(startDate);
+    d.setDate(startDate.getDate() + i);
+    const dateIso = localDayKey(d);
+    const { total, done } = await getDayProgress(dateIso);
+    const percent =
+      total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0;
+    bars.push({ date: dateIso, percent });
+  }
+
+  return bars;
+}
+
+/**
+ * Constrói barras de foco por categoria (7 dias).
+ * doneCount = 1 se o dia teve atividade na categoria, 0 caso contrário.
+ */
+async function buildFocusCategoryBars(
+  categoryId: string,
+  weekStart: string,
+  weekEnd: string
+): Promise<FocusCategoryBar[]> {
+  const goals = await listGoalsWeekly();
+  const goal = goals.find((g) => g.category_id === categoryId);
+  const targetCount = goal?.target_count ?? 0;
+
+  const startDate = new Date(weekStart + 'T12:00:00');
+  const bars: FocusCategoryBar[] = [];
+
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(startDate);
+    d.setDate(startDate.getDate() + i);
+    const dateIso = localDayKey(d);
+    const dayRange = { start: dateIso, end: dateIso };
+    const doneByDay = await getWeeklyDoneCountsByCategory(
+      dayRange.start,
+      dayRange.end
+    );
+    const doneCount = doneByDay.get(categoryId) ?? 0;
+    const hit = doneCount >= 1;
+    bars.push({
+      date: dateIso,
+      doneCount,
+      targetCount,
+      hit,
+    });
+  }
+
+  return bars;
 }
 
 /**
@@ -131,11 +218,23 @@ async function findNextUpcomingItem(
  */
 export async function buildWidgetSnapshot(): Promise<WidgetSnapshot> {
   const todayLocal = localDayKey(new Date());
-  const [items, nextItem, routinesWithTimes, streakCurrent] = await Promise.all([
+  const refDate = new Date(todayLocal + 'T12:00:00');
+  const { start: weekStart, end: weekEnd } = getWeekRangeISO(refDate);
+
+  const [
+    items,
+    nextItem,
+    routinesWithTimes,
+    streakCurrent,
+    streakBest,
+    weeklyBars,
+  ] = await Promise.all([
     generateDayItems(todayLocal),
     findNextUpcomingItem(todayLocal),
     getRoutinesWithTimesForDay(todayLocal),
     getStreakCurrent(),
+    getStreakBest(),
+    buildWeeklyBars(refDate),
   ]);
 
   let totalItems = items.length;
@@ -165,15 +264,13 @@ export async function buildWidgetSnapshot(): Promise<WidgetSnapshot> {
     streak: {
       current: streakCurrent || 0,
     },
+    weeklyBars,
+    weeklyBestStreak: streakBest > 0 ? streakBest : undefined,
   };
 
   const goals = await listGoalsWeekly();
   if (goals.length > 0) {
-    const { start: weekStart, end: weekEnd } = getWeekRangeISO(
-      new Date(todayLocal + 'T12:00:00')
-    );
     const doneByCat = await getWeeklyDoneCountsByCategory(weekStart, weekEnd);
-
     const goal = goals.reduce((a, b) =>
       (a.target_count >= b.target_count ? a : b)
     );
@@ -185,6 +282,22 @@ export async function buildWidgetSnapshot(): Promise<WidgetSnapshot> {
       target: goal.target_count,
       remaining,
     };
+
+    if (goals.length === 1) {
+      const cat = await getCategoryById(goal.category_id);
+      if (cat) {
+        base.focusCategory = {
+          id: cat.id,
+          name: getCategoryDisplayName(cat),
+          color_hex: cat.color_hex ?? '#7C4DFF',
+        };
+        base.focusCategoryBars = await buildFocusCategoryBars(
+          goal.category_id,
+          weekStart,
+          weekEnd
+        );
+      }
+    }
   }
 
   return base;
@@ -197,7 +310,25 @@ export async function buildWidgetSnapshot(): Promise<WidgetSnapshot> {
 export async function saveWidgetSnapshot(snapshot: WidgetSnapshot): Promise<void> {
   await setSetting(STORAGE_KEY, snapshot);
 
-  if (Platform.OS === 'ios' && Constants.executionEnvironment !== 'storeClient') {
+  if (Platform.OS === 'android' && Constants.executionEnvironment !== 'storeClient') {
+    try {
+      const { writeSnapshotAndroid, reloadAndroidWidget } = await import(
+        'ritmo-widget-bridge'
+      );
+      const json = JSON.stringify(snapshot);
+      await writeSnapshotAndroid(json);
+      reloadAndroidWidget();
+      if (__DEV__) {
+        console.log(
+          `[widgetService] Widget snapshot written Android (bytes=${new TextEncoder().encode(json).length})`
+        );
+      }
+    } catch (e) {
+      if (__DEV__) {
+        console.warn('[widgetService] Android widget write failed:', e);
+      }
+    }
+  } else if (Platform.OS === 'ios' && Constants.executionEnvironment !== 'storeClient') {
     const json = JSON.stringify(snapshot);
     const bytes = new TextEncoder().encode(json).length;
 

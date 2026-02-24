@@ -72,20 +72,20 @@ export default function WidgetPreviewScreen() {
     <>
       <Stack.Screen options={{ title: t('settings.widgetPreview') }} />
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <Text style={styles.sectionTitle}>Widget Small (preview)</Text>
+        <Text style={styles.sectionTitle}>{t('widget.previewSmall')}</Text>
         <View style={styles.widgetPreview}>
           <WidgetSmall snapshot={displaySnapshot} />
         </View>
 
         <Text style={[styles.sectionTitle, { marginTop: 24 }]}>
-          Widget Medium (preview)
+          {t('widget.previewMedium')}
         </Text>
         <View style={styles.widgetPreview}>
           <WidgetMedium snapshot={displaySnapshot} />
         </View>
 
         <Text style={[styles.sectionTitle, { marginTop: 32 }]}>
-          Snapshot raw (opcional)
+          {t('widget.snapshotRaw')}
         </Text>
         <Text style={styles.label}>{t('widget.updatedAt')}</Text>
         <Text style={styles.value}>
@@ -96,7 +96,7 @@ export default function WidgetPreviewScreen() {
 
         {snapshot && (
           <View style={styles.block}>
-            <Text style={styles.blockTitle}>{'today'}</Text>
+            <Text style={styles.blockTitle}>{t('widget.blockToday')}</Text>
             <Text style={styles.line}>
               {'date: '}{snapshot.today.date}
             </Text>
@@ -138,7 +138,7 @@ export default function WidgetPreviewScreen() {
 
         {snapshot?.streak != null && (
           <View style={styles.block}>
-            <Text style={styles.blockTitle}>{'streak'}</Text>
+            <Text style={styles.blockTitle}>{t('widget.blockStreak')}</Text>
             <Text style={styles.line}>
               {'current: '}{snapshot.streak.current}
             </Text>
@@ -147,7 +147,7 @@ export default function WidgetPreviewScreen() {
 
         {snapshot?.weekly != null && (
           <View style={styles.block}>
-            <Text style={styles.blockTitle}>{'weekly'}</Text>
+            <Text style={styles.blockTitle}>{t('widget.blockWeekly')}</Text>
             <Text style={styles.line}>
               {'activeDays: '}{snapshot.weekly.activeDays}
             </Text>

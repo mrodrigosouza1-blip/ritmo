@@ -13,6 +13,18 @@ export async function getOnboardingCompleted(): Promise<boolean> {
   return row?.value === '1';
 }
 
+/**
+ * Retorna true se deve mostrar o onboarding (primeira vez ou após reset).
+ */
+export async function shouldShowOnboarding(): Promise<boolean> {
+  return !(await getOnboardingCompleted());
+}
+
+/** Alias semântico: marca que o usuário já viu o onboarding. */
+export async function setHasSeenOnboarding(value: boolean): Promise<void> {
+  await setOnboardingCompleted(value);
+}
+
 export async function setOnboardingCompleted(value: boolean): Promise<void> {
   const db = await getDatabase();
   await db.runAsync(

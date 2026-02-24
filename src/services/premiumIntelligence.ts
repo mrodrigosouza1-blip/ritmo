@@ -21,6 +21,7 @@ import { addDaysToIso } from '@/src/utils/date';
 import { isWithinQuietHours } from '@/src/utils/timeWindow';
 import { t, getLocale } from '@/src/i18n';
 import { formatMonthYear } from '@/src/utils/formatDate';
+import { checkAndEmitAchievements } from '@/src/services/achievements';
 import {
   getStreakCurrent,
   setStreakCurrent,
@@ -103,11 +104,39 @@ function nowHHmm(): string {
 }
 
 /**
+ * Atualiza streak para todos os usuários (usado por conquistas e widget).
+ */
+export async function updateStreakForDate(todayIso: string): Promise<void> {
+  const yesterdayIso = addDaysToIso(todayIso, -1);
+  const todayActive = await isDayActive(todayIso);
+  const [streakCurrent, streakLastActive] = await Promise.all([
+    getStreakCurrent(),
+    getStreakLastActiveDate(),
+  ]);
+  if (todayActive) {
+    let newStreak: number;
+    if (yesterdayIso === streakLastActive) {
+      newStreak = streakCurrent + 1;
+    } else {
+      newStreak = 1;
+    }
+    await setStreakCurrent(newStreak);
+    await setStreakLastActiveDate(todayIso);
+  } else {
+    if (streakLastActive === yesterdayIso && streakCurrent > 0) {
+      await setStreakCurrent(0);
+    }
+  }
+}
+
+/**
  * Executa a inteligência premium: streak, meta quase batida, resumo semanal, comparativo mensal.
- * Só roda se isPremium && notifications_enabled && notifications.smart.premium.
- * Respeita quiet hours. Máx 1 notificação premium por dia.
+ * Streak é atualizado para todos. Notificações só para premium.
  */
 export async function runPremiumIntelligence(todayIso: string): Promise<void> {
+  await updateStreakForDate(todayIso);
+  await checkAndEmitAchievements(todayIso);
+
   const [sub, enabled, level, quietEnabled, quietStart, quietEnd, premiumSent] =
     await Promise.all([
       getSubscriptionStatus(),
@@ -124,12 +153,10 @@ export async function runPremiumIntelligence(todayIso: string): Promise<void> {
 
   const yesterdayIso = addDaysToIso(todayIso, -1);
   const todayActive = await isDayActive(todayIso);
-  const [streakCurrent, streakLastActive] = await Promise.all([
-    getStreakCurrent(),
-    getStreakLastActiveDate(),
-  ]);
+  const streakCurrent = await getStreakCurrent();
+  const streakLastActive = await getStreakLastActiveDate();
 
-  // 1) Sequência / Streak
+  // 1) Notificação de sequência / Streak
   if (todayActive) {
     let newStreak: number;
     if (yesterdayIso === streakLastActive) {
@@ -137,9 +164,6 @@ export async function runPremiumIntelligence(todayIso: string): Promise<void> {
     } else {
       newStreak = 1;
     }
-    await setStreakCurrent(newStreak);
-    await setStreakLastActiveDate(todayIso);
-
     const shouldNotifyStreak =
       newStreak === 3 ||
       newStreak === 5 ||
@@ -166,11 +190,9 @@ export async function runPremiumIntelligence(todayIso: string): Promise<void> {
         );
         if (sent) {
           await setStreakBreakSentToday(todayIso);
-          await setStreakCurrent(0);
           return;
         }
       }
-      await setStreakCurrent(0);
     }
   }
 

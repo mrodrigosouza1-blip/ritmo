@@ -95,6 +95,13 @@ export const MIGRATIONS = [
   )`,
   `CREATE INDEX IF NOT EXISTS idx_day_routine_times_date ON day_routine_times(date)`,
   `CREATE UNIQUE INDEX IF NOT EXISTS uniq_day_routine_times ON day_routine_times(date, routine_id, time)`,
+  `CREATE TABLE IF NOT EXISTS achievements (
+    id TEXT PRIMARY KEY,
+    key TEXT UNIQUE NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    unlocked_at TEXT NOT NULL
+  )`,
 ];
 
 export async function runMigrations(db: SQLite.SQLiteDatabase): Promise<void> {
@@ -219,4 +226,5 @@ export async function runMigrations(db: SQLite.SQLiteDatabase): Promise<void> {
       await db.runAsync('ALTER TABLE categories ADD COLUMN is_system INTEGER NOT NULL DEFAULT 0');
     }
   } catch (_) {}
+
 }

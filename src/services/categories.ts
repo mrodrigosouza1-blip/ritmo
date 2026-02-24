@@ -1,20 +1,27 @@
 import { getDatabase } from '@/src/db/database';
 import type { Category } from '@/src/types';
 
+/**
+ * Categorias default. name é fallback; display vem de i18n via slug (category.work, etc.)
+ */
 const DEFAULT_CATEGORIES: Array<Omit<Category, 'id'> & { slug: string }> = [
   { name: 'Trabalho', color_hex: '#5C6BC0', icon: 'briefcase', slug: 'work' },
   { name: 'Saúde', color_hex: '#66BB6A', icon: 'heart', slug: 'fitness' },
-  { name: 'Pessoal', color_hex: '#FF7043', icon: 'user', slug: 'home' },
+  { name: 'Casa', color_hex: '#FF7043', icon: 'user', slug: 'home' },
   { name: 'Estudos', color_hex: '#26A69A', icon: 'book', slug: 'study' },
 ];
 
+/** Migração: nomes antigos -> slug estável para i18n. */
 const NAME_TO_SLUG: Record<string, string> = {
   Trabalho: 'work',
   Saúde: 'fitness',
   Fitness: 'fitness',
-  Pessoal: 'home',
+  Pessoal: 'personal',
   Casa: 'home',
   Estudos: 'study',
+  Home: 'home',
+  Work: 'work',
+  Study: 'study',
 };
 
 export async function ensureDefaultCategories(): Promise<void> {

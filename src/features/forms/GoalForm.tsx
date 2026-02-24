@@ -13,6 +13,8 @@ import {
   upsertGoalWeekly,
   deleteGoalWeekly,
 } from '@/src/services/goalsWeekly';
+import { debouncedSyncWidgets } from '@/src/services/widgetsSync';
+import { localDayKey } from '@/src/utils/dateKey';
 import { getAllCategories } from '@/src/services/categories';
 import { getCategoryDisplayName } from '@/src/services/categoryDisplay';
 import { ensureDefaultCategories } from '@/src/services/categories';
@@ -75,6 +77,7 @@ export function GoalForm({ mode, id, categoryId: initialCategoryId, onClose }: G
         category_id: categoryId,
         target_count: targetCount,
       });
+      debouncedSyncWidgets(localDayKey(new Date()));
       showToast({
         message: mode === 'create' ? t('toast.goalCreated') : t('toast.goalUpdated'),
         type: 'success',
@@ -99,6 +102,7 @@ export function GoalForm({ mode, id, categoryId: initialCategoryId, onClose }: G
           onPress: async () => {
             try {
               await deleteGoalWeekly(id);
+              debouncedSyncWidgets(localDayKey(new Date()));
               onClose();
             } catch (e) {
               if (__DEV__) console.error(e);

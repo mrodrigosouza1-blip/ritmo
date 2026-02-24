@@ -17,6 +17,7 @@ import {
   getRoutinesWithTimesForDay,
   type RoutineWithTimesItem,
 } from '@/src/features/today/generateDayItems';
+import { runPremiumIntelligence } from '@/src/services/premiumIntelligence';
 import { toggleDayRoutineTime } from '@/src/services/dayRoutineTimes';
 import { getActiveRoutines } from '@/src/services/routines';
 import { getCategoryDisplayName } from '@/src/services/categoryDisplay';
@@ -43,6 +44,9 @@ import {
   getNextWeekSameDayIso,
 } from '@/src/services/reschedule';
 import { localDayKey } from '@/src/utils/dateKey';
+import { getWeekRangeISO } from '@/src/utils/weekRange';
+import { getWeeklyDoneCountsByCategory } from '@/src/services/goalsProgress';
+import { listGoalsWeekly } from '@/src/services/goalsWeekly';
 import { debouncedSyncWidgets } from '@/src/services/widgetsSync';
 import { setNewItemDate } from '@/src/store/newItemDate';
 import type { DayItemWithDetails } from '@/src/types';
@@ -51,6 +55,7 @@ import { useLocale } from '@/src/i18n/useLocale';
 import { formatDate, formatWeekday, formatNextEventDay } from '@/src/utils/formatDate';
 import { useToast } from '@/src/components/toast';
 import { AnimatedDoneCard } from '@/src/components/AnimatedDoneCard';
+import { FadeInCheck } from '@/src/components/FadeInCheck';
 import { FabAddMenu } from '@/src/components/FabAddMenu';
 
 const BLOCK_COLORS = {
@@ -174,19 +179,42 @@ export default function TodayScreen({ initialDate }: { initialDate?: string }) {
   }, [loadItems]);
 
   const handleMarkDone = useCallback(
-    async (id: string) => {
-      await markDayItemDone(id, true, displayDate);
+    async (item: DayItemWithDetails) => {
+      const categoryId = item.category_id;
+      const { start, end } = getWeekRangeISO(new Date(displayDate + 'T12:00:00'));
+      const beforeCounts = categoryId
+        ? (await getWeeklyDoneCountsByCategory(start, end)).get(categoryId) ?? 0
+        : 0;
+
+      await markDayItemDone(item.id, true, displayDate);
       setItems((prev) =>
-        prev.map((item) =>
-          item.id === id
-            ? { ...item, status: 'done' as const, done_at: new Date().toISOString() }
-            : item
+        prev.map((i) =>
+          i.id === item.id
+            ? { ...i, status: 'done' as const, done_at: new Date().toISOString() }
+            : i
         )
       );
       debouncedSyncWidgets(todayIso);
-      showToast({ message: t('toast.markedDone'), type: 'success' });
+
+      let goalReached = false;
+      if (categoryId) {
+        const [afterMap, goals] = await Promise.all([
+          getWeeklyDoneCountsByCategory(start, end),
+          listGoalsWeekly(),
+        ]);
+        const afterCount = afterMap.get(categoryId) ?? 0;
+        const goal = goals.find((g) => g.category_id === categoryId);
+        if (goal && beforeCounts < goal.target_count && afterCount >= goal.target_count) {
+          goalReached = true;
+        }
+      }
+
+      showToast({
+        message: goalReached ? t('toast.goalReached') : t('toast.markedDone'),
+        type: 'success',
+      });
     },
-    [showToast, todayIso, displayDate]
+    [showToast, todayIso, displayDate, t]
   );
 
   const handleUndoDone = useCallback(
@@ -261,7 +289,8 @@ export default function TodayScreen({ initialDate }: { initialDate?: string }) {
       );
       debouncedSyncWidgets(todayIso);
       if (nextStatus === 'done') {
-        showToast({ message: `Concluído: ${timeHHmm}`, type: 'success' });
+        runPremiumIntelligence(displayDate).catch(() => {});
+        showToast({ message: t('toast.routineTimeDone', { time: timeHHmm }), type: 'success' });
       }
     },
     [displayDate, todayIso, showToast]
@@ -344,7 +373,7 @@ export default function TodayScreen({ initialDate }: { initialDate?: string }) {
             isDone: item.status === 'done',
             sourceType: item.source_type,
             isMovedRoutine: !!item.movedFromDate,
-            onMarkDone: () => handleMarkDone(item.id),
+            onMarkDone: () => handleMarkDone(item),
             onUndoDone: () => handleUndoDone(item.id),
             onEdit: () => openEdit(item, displayDate),
             onReschedule: {
@@ -376,9 +405,9 @@ export default function TodayScreen({ initialDate }: { initialDate?: string }) {
             styles.checkbox,
             item.status === 'done' && styles.checkboxDone,
           ]}>
-          {item.status === 'done' && (
+          <FadeInCheck visible={item.status === 'done'}>
             <Text style={styles.checkmark}>✓</Text>
-          )}
+          </FadeInCheck>
         </View>
         <View
           style={[
@@ -565,17 +594,17 @@ export default function TodayScreen({ initialDate }: { initialDate?: string }) {
               <Pressable
                 style={styles.emptyDayBtn}
                 onPress={() => router.push(`/modal/event?date=${date}`)}>
-                <Text style={styles.emptyDayBtnText}>{t('today.addEvent')}</Text>
+                <Text style={styles.emptyDayBtnText}>{t('today.emptyAddEvent')}</Text>
               </Pressable>
               <Pressable
                 style={styles.emptyDayBtn}
                 onPress={() => router.push(`/modal/routine?date=${date}`)}>
-                <Text style={styles.emptyDayBtnText}>{t('today.addRoutine')}</Text>
+                <Text style={styles.emptyDayBtnText}>{t('today.emptyAddRoutine')}</Text>
               </Pressable>
               <Pressable
                 style={styles.emptyDayBtn}
                 onPress={() => router.push(`/modal/task?date=${date}`)}>
-                <Text style={styles.emptyDayBtnText}>{t('today.addTask')}</Text>
+                <Text style={styles.emptyDayBtnText}>{t('today.emptyAddTask')}</Text>
               </Pressable>
             </View>
             {!hasRoutines && (
@@ -696,9 +725,9 @@ export default function TodayScreen({ initialDate }: { initialDate?: string }) {
                             styles.checkbox,
                             drt.status === 'done' && styles.checkboxDone,
                           ]}>
-                          {drt.status === 'done' && (
+                          <FadeInCheck visible={drt.status === 'done'}>
                             <Text style={styles.checkmark}>✓</Text>
-                          )}
+                          </FadeInCheck>
                         </View>
                         <Text
                           style={[

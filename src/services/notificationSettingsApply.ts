@@ -1,5 +1,6 @@
 import { localDayKey } from '@/src/utils/dateKey';
 import { scheduleDailyCheck } from '@/src/services/dailyCheck';
+import { scheduleSmartNotification } from '@/src/services/smartNotifications';
 import { scheduleItemNotification, cancelItemNotification } from '@/src/services/notificationEngine';
 import { getEventsFromDate, updateEvent } from '@/src/services/events';
 import { getTasksFromDate, updateTask } from '@/src/services/tasks';
@@ -15,6 +16,12 @@ import { getTasksFromDate, updateTask } from '@/src/services/tasks';
 export async function applyNotificationSettings(): Promise<void> {
   try {
     await scheduleDailyCheck();
+  } catch {
+    // ignora
+  }
+
+  try {
+    await scheduleSmartNotification();
   } catch {
     // ignora
   }

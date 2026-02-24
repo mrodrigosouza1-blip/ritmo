@@ -26,6 +26,7 @@ import { exportBackupJson } from '@/src/services/backup';
 import { exportWeeklyPdf } from '@/src/services/pdfExport';
 import { clearAllData } from '@/src/services/clearAllData';
 import { getWeekRangeISO } from '@/src/utils/weekRange';
+import { setHasSeenOnboarding } from '@/src/services/onboardingStorage';
 
 import { SettingsSection } from '@/src/components/settings/SettingsSection';
 import { SettingsRow } from '@/src/components/settings/SettingsRow';
@@ -216,6 +217,12 @@ export default function SettingsScreen() {
           onPress={() => router.push('/goals')}
         />
         <SettingsRow
+          title={t('achievements.title')}
+          subtitle={t('achievements.subtitle')}
+          icon="trophy"
+          onPress={() => router.push('/achievements')}
+        />
+        <SettingsRow
           title={t('settings.weekSummary')}
           subtitle={t('settings.weekSummarySubtitle')}
           icon="calendar"
@@ -324,7 +331,7 @@ export default function SettingsScreen() {
         />
         <SettingsRow
           title={t('settings.support')}
-          subtitle="suporte@locione.com"
+          subtitle={t('settings.supportEmail')}
           icon="envelope"
           onPress={() => Linking.openURL('mailto:suporte@locione.com')}
         />
@@ -348,6 +355,17 @@ export default function SettingsScreen() {
           icon="mobile"
           onPress={() => router.push('/settings/widget-preview')}
         />
+        {__DEV__ && (
+          <SettingsRow
+            title={t('onboarding.revert')}
+            subtitle={t('settings.devHint')}
+            icon="refresh"
+            onPress={async () => {
+              await setHasSeenOnboarding(false);
+              router.replace('/onboarding');
+            }}
+          />
+        )}
       </SettingsSection>
 
       {/* H) Zona perigosa */}

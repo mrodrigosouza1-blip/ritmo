@@ -2,6 +2,7 @@ import { getDatabase } from '@/src/db/database';
 
 const KEYS = {
   streakCurrent: 'streak_current',
+  streakBest: 'streak_best',
   streakLastActiveDate: 'streak_last_active_date',
   lastWeeklySummarySent: 'last_weekly_summary_sent',
   lastMonthlyCompareSent: 'last_monthly_compare_sent',
@@ -25,6 +26,27 @@ export async function setStreakCurrent(value: number): Promise<void> {
   await db.runAsync(
     'INSERT OR REPLACE INTO ui_settings (key, value) VALUES (?, ?)',
     KEYS.streakCurrent,
+    String(value)
+  );
+  const best = await getStreakBest();
+  if (value > best) await setStreakBest(value);
+}
+
+export async function getStreakBest(): Promise<number> {
+  const db = await getDatabase();
+  const row = await db.getFirstAsync<{ value: string }>(
+    'SELECT value FROM ui_settings WHERE key = ?',
+    KEYS.streakBest
+  );
+  const n = row?.value != null ? parseInt(row.value, 10) : NaN;
+  return Number.isFinite(n) ? n : 0;
+}
+
+export async function setStreakBest(value: number): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync(
+    'INSERT OR REPLACE INTO ui_settings (key, value) VALUES (?, ?)',
+    KEYS.streakBest,
     String(value)
   );
 }

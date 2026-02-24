@@ -71,10 +71,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             style={[
               styles.toastLayer,
               {
-                paddingTop: insets.top,
-                paddingBottom: insets.bottom,
-                paddingLeft: insets.left,
-                paddingRight: insets.right,
+                paddingBottom: 24 + insets.bottom,
+                paddingLeft: 16 + insets.left,
+                paddingRight: 16 + insets.right,
               },
             ]}
             pointerEvents="none">
@@ -100,8 +99,9 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
     alignItems: 'center',
+    paddingBottom: 24,
     zIndex: 9999,
   },
 });

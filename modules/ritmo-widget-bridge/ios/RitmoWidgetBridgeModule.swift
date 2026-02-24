@@ -1,7 +1,7 @@
 import ExpoModulesCore
 import WidgetKit
 
-let appGroupId = "group.com.locione.ritmo"
+let appGroupId = "group.com.locione.ritmo.shared"
 let snapshotFileName = "ritmo_widget_snapshot_v1.json"
 
 public class RitmoWidgetBridgeModule: Module {

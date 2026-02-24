@@ -1,8 +1,19 @@
 /**
- * Snapshot de dados para o Widget.
- * Persistido em storage e pronto para integrar com widget nativo depois.
- * Campos progressPercent, streak e weekly são opcionais (retrocompatíveis).
+ * Snapshot de dados para o Widget (v2).
+ * Campos weeklyBars, focusCategory são opcionais (retrocompatíveis).
  */
+export interface WeeklyBar {
+  date: string;
+  percent: number;
+}
+
+export interface FocusCategoryBar {
+  date: string;
+  doneCount: number;
+  targetCount: number;
+  hit: boolean;
+}
+
 export type WidgetSnapshot = {
   generatedAt: string;
   locale: 'pt' | 'en' | 'it';
@@ -10,7 +21,6 @@ export type WidgetSnapshot = {
     date: string;
     totalItems: number;
     doneItems: number;
-    /** Percentual 0–100 de itens concluídos no dia. Opcional. */
     progressPercent?: number;
     nextItem?: {
       type: 'event' | 'routine' | 'task';
@@ -20,14 +30,24 @@ export type WidgetSnapshot = {
       categoryColor?: string;
     };
   };
-  /** Sequência de dias ativos. Opcional. */
   streak?: {
     current: number;
   };
-  /** Meta semanal mais relevante (se existir). Opcional. */
   weekly?: {
     activeDays: number;
     target: number;
     remaining: number;
   };
+  /** Barras diárias da semana (Seg–Dom). Opcional, retrocompatível. */
+  weeklyBars?: WeeklyBar[];
+  /** Melhor sequência da semana. Opcional. */
+  weeklyBestStreak?: number;
+  /** Categoria em foco no widget. Opcional. */
+  focusCategory?: {
+    id: string;
+    name: string;
+    color_hex: string;
+  };
+  /** Barras da categoria em foco (por dia). Opcional. */
+  focusCategoryBars?: FocusCategoryBar[];
 };

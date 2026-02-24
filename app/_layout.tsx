@@ -2,19 +2,19 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import Constants from 'expo-constants';
 import { useEffect, useState } from 'react';
-import { Platform, AppState, type AppStateStatus } from 'react-native';
+import { AppState, type AppStateStatus } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import 'react-native-reanimated';
 
 import { ToastProvider } from '@/src/components/toast';
+import { AchievementProvider } from '@/src/components/AchievementProvider';
 import { getDatabase } from '@/src/db/database';
 import { getOnboardingCompleted } from '@/src/services/onboardingStorage';
 import { setupNotifications } from '@/src/services/notifications';
 import { scheduleDailyCheck } from '@/src/services/dailyCheck';
 import { runPremiumIntelligence } from '@/src/services/premiumIntelligence';
-import { syncWidgetsSnapshotForDate } from '@/src/services/widgetsSync';
+import { scheduleSmartNotification } from '@/src/services/smartNotifications';
 import { syncWidgetSnapshot } from '@/src/widgets/useWidgetSync';
 import { localDayKey } from '@/src/utils/dateKey';
 import { initLocale } from '@/src/i18n';
@@ -59,10 +59,12 @@ export default function RootLayout() {
     const todayIso = localDayKey(new Date());
     scheduleDailyCheck().catch(() => {});
     runPremiumIntelligence(todayIso).catch(() => {});
+    scheduleSmartNotification().catch(() => {});
     const sub = AppState.addEventListener('change', (state: AppStateStatus) => {
       if (state === 'active') {
         scheduleDailyCheck().catch(() => {});
         runPremiumIntelligence(localDayKey(new Date())).catch(() => {});
+        scheduleSmartNotification().catch(() => {});
       }
     });
     return () => sub.remove();
@@ -81,20 +83,10 @@ export default function RootLayout() {
       });
   }, [dbReady]);
 
-  // Widgets (expo-widgets + @expo/ui) só existem em Development Build, não no Expo Go
-  const isExpoGo = Constants.executionEnvironment === 'storeClient';
-  useEffect(() => {
-    if (Platform.OS !== 'ios' || isExpoGo) return;
-    import('@/src/widgets/RitmoWidgets').catch(() => {});
-  }, [isExpoGo]);
-
   useEffect(() => {
     if (!dbReady) return;
-    if (!isExpoGo) {
-      syncWidgetsSnapshotForDate(localDayKey(new Date())).catch(() => {});
-    }
     syncWidgetSnapshot().catch(() => {});
-  }, [dbReady, isExpoGo]);
+  }, [dbReady]);
 
   useEffect(() => {
     if (loaded && dbReady && onboardingChecked) {
@@ -107,6 +99,7 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <ToastProvider>
+      <AchievementProvider>
         {!ready ? null : (
         <Stack
           initialRouteName={showOnboarding ? 'onboarding' : '(tabs)'}
@@ -146,6 +139,13 @@ export default function RootLayout() {
       />
       <Stack.Screen name="settings" options={{ headerShown: false }} />
       <Stack.Screen
+        name="achievements"
+        options={{
+          title: t('achievements.title'),
+          headerShown: true,
+        }}
+      />
+      <Stack.Screen
         name="modal"
         options={{
           presentation: 'modal',
@@ -154,6 +154,7 @@ export default function RootLayout() {
       />
         </Stack>
         )}
+      </AchievementProvider>
       </ToastProvider>
     </SafeAreaProvider>
   );

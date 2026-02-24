@@ -104,7 +104,7 @@ export default function TemplatesScreen() {
             <Pressable
               style={styles.verBtn}
               onPress={() => setDetailTemplate(template)}>
-              <Text style={styles.verBtnText}>{t('templates.viewDetails')}</Text>
+              <Text style={styles.verBtnText}>{t('templates.viewItems')}</Text>
             </Pressable>
             <Pressable
               style={[styles.applyBtn, applying === template.id && styles.applyBtnDisabled]}

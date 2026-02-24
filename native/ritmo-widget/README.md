@@ -11,7 +11,7 @@ Widget iOS que lê `ritmo_widget_snapshot_v1.json` do App Group e exibe progress
    - Desmarque "Include Configuration Intent"
 3. **Capabilities** do target RitmoWidget:
    - App Groups → habilitar
-   - Adicionar `group.com.locione.ritmo`
+   - Adicionar `group.com.locione.ritmo.shared`
 4. **Substituir** os arquivos gerados pelos deste diretório:
    - Copie `SnapshotModel.swift`, `SnapshotReader.swift`, `RitmoWidget.swift` para o grupo RitmoWidget no Xcode
    - Remova o `RitmoWidget.swift` gerado e adicione nossos arquivos
@@ -28,5 +28,5 @@ Widget iOS que lê `ritmo_widget_snapshot_v1.json` do App Group e exibe progress
 
 ## App Group
 
-- ID: `group.com.locione.ritmo`
+- ID: `group.com.locione.ritmo.shared`
 - Arquivo: `ritmo_widget_snapshot_v1.json`

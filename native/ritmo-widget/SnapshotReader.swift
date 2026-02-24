@@ -1,7 +1,7 @@
 import Foundation
 
 enum SnapshotReader {
-    static let appGroupId = "group.com.locione.ritmo"
+    static let appGroupId = "group.com.locione.ritmo.shared"
     static let fileName = "ritmo_widget_snapshot_v1.json"
 
     /// Retorna o snapshot ou um fallback vazio.
@@ -46,7 +46,11 @@ enum SnapshotReader {
                 nextItem: nil
             ),
             streak: StreakModel(current: 0),
-            weekly: WeeklyModel(activeDays: 0, target: 7, remaining: 7)
+            weekly: WeeklyModel(activeDays: 0, target: 7, remaining: 7),
+            weeklyBars: nil,
+            weeklyBestStreak: nil,
+            focusCategory: nil,
+            focusCategoryBars: nil
         )
     }
 }

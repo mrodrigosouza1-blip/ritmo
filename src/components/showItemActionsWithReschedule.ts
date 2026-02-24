@@ -60,22 +60,25 @@ export function showItemActionsWithReschedule(
   const mainOptions: string[] = [];
   const mainHandlers: (() => void)[] = [];
 
+  // Principal: marcar/desmarcar
   mainOptions.push(isDone ? t('modal.undoDone') : t('modal.markDone'));
   mainHandlers.push(() => (isDone ? onUndoDone() : onMarkDone()));
 
   mainOptions.push(t('common.edit'));
   mainHandlers.push(onEdit);
 
-  mainOptions.push(t('modal.rescheduleAction'));
-  mainHandlers.push(() => showRescheduleSubmenu(onReschedule));
-
-  if (sourceType === 'routine' && onSkipToday && !isMovedRoutine) {
-    mainOptions.push(t('modal.skipToday'));
-    mainHandlers.push(onSkipToday);
-  }
-  if (sourceType === 'routine' && isMovedRoutine && onUndoReschedule) {
-    mainOptions.push(t('modal.undoReschedule'));
-    mainHandlers.push(onUndoReschedule);
+  // Reagendar só quando pending (quando done, focar em desfazer ou editar)
+  if (!isDone) {
+    mainOptions.push(t('modal.rescheduleAction'));
+    mainHandlers.push(() => showRescheduleSubmenu(onReschedule));
+    if (sourceType === 'routine' && onSkipToday && !isMovedRoutine) {
+      mainOptions.push(t('modal.skipToday'));
+      mainHandlers.push(onSkipToday);
+    }
+    if (sourceType === 'routine' && isMovedRoutine && onUndoReschedule) {
+      mainOptions.push(t('modal.undoReschedule'));
+      mainHandlers.push(onUndoReschedule);
+    }
   }
 
   mainOptions.push(t('common.cancel'));

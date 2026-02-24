@@ -60,6 +60,13 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="insights"
+        options={{
+          title: t('nav.insights'),
+          tabBarIcon: ({ color }) => <TabBarIcon name="lightbulb-o" color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="settings"
         options={{
           title: t('nav.settings'),

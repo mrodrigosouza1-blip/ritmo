@@ -8,6 +8,8 @@ interface AnimatedDoneCardProps {
   style?: ViewStyle;
 }
 
+const DONE_OPACITY = 0.75;
+
 export function AnimatedDoneCard({
   done,
   children,
@@ -25,24 +27,24 @@ export function AnimatedDoneCard({
         Animated.parallel([
           Animated.timing(scale, {
             toValue: 0.98,
-            duration: 60,
+            duration: 80,
             useNativeDriver: true,
           }),
           Animated.timing(opacity, {
-            toValue: 0.85,
-            duration: 60,
+            toValue: 0.7,
+            duration: 80,
             useNativeDriver: true,
           }),
         ]),
         Animated.parallel([
           Animated.timing(scale, {
             toValue: 1,
-            duration: 100,
+            duration: 120,
             useNativeDriver: true,
           }),
           Animated.timing(opacity, {
-            toValue: 0.7,
-            duration: 100,
+            toValue: DONE_OPACITY,
+            duration: 120,
             useNativeDriver: true,
           }),
         ]),
@@ -56,7 +58,7 @@ export function AnimatedDoneCard({
     } else {
       prevDone.current = done;
       if (done) {
-        opacity.setValue(0.7);
+        opacity.setValue(DONE_OPACITY);
       } else {
         scale.setValue(1);
         opacity.setValue(1);

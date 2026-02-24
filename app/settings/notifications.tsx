@@ -30,12 +30,21 @@ import {
   setSmartBasicEnabled,
   getSmartPremiumEnabled,
   setSmartPremiumEnabled,
+  getSmartFrequency,
+  setSmartFrequency,
+  getSmartDefaultHour,
+  setSmartDefaultHour,
   type NotificationApplyTo,
+  type SmartFrequency,
 } from '@/src/services/notificationSettings';
 import { getSubscriptionStatus } from '@/src/services/subscription';
 import { applyNotificationSettings } from '@/src/services/notificationSettingsApply';
 import { PremiumModal } from '@/src/components/PremiumModal';
 import { localDayKey } from '@/src/utils/dateKey';
+import {
+  debugEvaluateSmartRules,
+  debugSendTestSmartNotification,
+} from '@/src/services/smartNotifications';
 
 const OFFSET_OPTIONS = [
   { value: 0, labelKey: 'notifications.offset.onTime' },
@@ -46,6 +55,12 @@ const OFFSET_OPTIONS = [
   { value: 60, labelKey: 'notifications.offset.1h' },
   { value: 120, labelKey: 'notifications.offset.2h' },
 ] as const;
+
+const FREQUENCY_OPTIONS: { value: SmartFrequency; labelKey: string }[] = [
+  { value: 'never', labelKey: 'notifications.frequencyNever' },
+  { value: 'once_per_day', labelKey: 'notifications.frequencyDaily' },
+  { value: 'only_near_goal', labelKey: 'notifications.frequencyNearGoal' },
+];
 
 export default function NotificationSettingsScreen() {
   const { t } = useLocale();
@@ -62,11 +77,15 @@ export default function NotificationSettingsScreen() {
   const [quietEnd, setQuietEnd] = useState('08:00');
   const [smartBasic, setSmartBasic] = useState(true);
   const [smartPremium, setSmartPremium] = useState(false);
+  const [smartFrequency, setSmartFrequencyState] = useState<SmartFrequency>('once_per_day');
+  const [smartTime, setSmartTime] = useState('19:30');
   const [isPremium, setIsPremium] = useState(false);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [debugRule, setDebugRule] = useState<string | null>(null);
+  const [debugLoading, setDebugLoading] = useState(false);
 
   const load = useCallback(async () => {
-    const [e, o, a, qe, qs, qend, sb, sp, sub] = await Promise.all([
+    const [e, o, a, qe, qs, qend, sb, sp, freq, st, sub] = await Promise.all([
       getNotificationEnabled(),
       getNotificationOffsetMinutes(),
       getNotificationApplyTo(),
@@ -75,6 +94,8 @@ export default function NotificationSettingsScreen() {
       getQuietHoursEnd(),
       getSmartBasicEnabled(),
       getSmartPremiumEnabled(),
+      getSmartFrequency(),
+      getSmartDefaultHour(),
       getSubscriptionStatus(),
     ]);
     setEnabled(e);
@@ -85,6 +106,8 @@ export default function NotificationSettingsScreen() {
     setQuietEnd(qend);
     setSmartBasic(sb);
     setSmartPremium(sp);
+    setSmartFrequencyState(freq);
+    setSmartTime(st);
     setIsPremium(sub.isPremium);
   }, []);
 
@@ -152,6 +175,37 @@ export default function NotificationSettingsScreen() {
     setSmartPremium(v);
     await setSmartPremiumEnabled(v);
     onConfigChange();
+  };
+
+  const handleSmartFrequencyChange = async (v: SmartFrequency) => {
+    setSmartFrequencyState(v);
+    await setSmartFrequency(v);
+    onConfigChange();
+  };
+
+  const handleSmartTimeChange = async (v: string) => {
+    setSmartTime(v);
+    await setSmartDefaultHour(v);
+    onConfigChange();
+  };
+
+  const handleDebugTest = async () => {
+    setDebugLoading(true);
+    setDebugRule(null);
+    try {
+      const todayIso = localDayKey(new Date());
+      const { result, canSend } = await debugEvaluateSmartRules(todayIso);
+      if (result) {
+        setDebugRule(`${result.ruleId}: ${result.title}${canSend ? ' ' + t('smartNotif.debugOkToSend') : ' ' + t('smartNotif.debugAlreadySent')}`);
+        await debugSendTestSmartNotification();
+      } else {
+        setDebugRule(t('smartNotif.debugRule') + ': ' + t('smartNotif.debugNoRule'));
+      }
+    } catch (e) {
+      setDebugRule(String(e));
+    } finally {
+      setDebugLoading(false);
+    }
   };
 
   const todayIso = localDayKey(new Date());
@@ -312,7 +366,59 @@ export default function NotificationSettingsScreen() {
               thumbColor={smartPremium ? colors.primary : colors.textSecondary}
             />
           </View>
+          {smartPremium && isPremium && (
+            <>
+              <Text style={styles.frequencyLabel}>{t('notifications.frequency')}</Text>
+              {FREQUENCY_OPTIONS.map((opt) => (
+                <Pressable
+                  key={opt.value}
+                  style={[
+                    styles.offsetRow,
+                    smartFrequency === opt.value && styles.offsetRowActive,
+                  ]}
+                  onPress={() => handleSmartFrequencyChange(opt.value)}>
+                  <Text
+                    style={[
+                      styles.offsetLabel,
+                      smartFrequency === opt.value && styles.offsetLabelActive,
+                    ]}>
+                    {t(opt.labelKey)}
+                  </Text>
+                  {smartFrequency === opt.value && (
+                    <Text style={styles.check}>✓</Text>
+                  )}
+                </Pressable>
+              ))}
+              <View style={styles.quietRow}>
+                <Text style={styles.quietLabel}>{t('notifications.smartTime')}</Text>
+                <TimeField
+                  value={smartTime}
+                  onChange={handleSmartTimeChange}
+                  label=""
+                  dateIso={todayIso}
+                />
+              </View>
+            </>
+          )}
         </View>
+
+        {__DEV__ && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>{t('settings.debug')}</Text>
+            <Pressable
+              style={styles.offsetRow}
+              onPress={handleDebugTest}
+              disabled={debugLoading}>
+              <Text style={styles.offsetLabel}>
+                {t('smartNotif.debugTest')}
+                {debugLoading ? '...' : ''}
+              </Text>
+            </Pressable>
+            {debugRule != null && (
+              <Text style={styles.helper}>{debugRule}</Text>
+            )}
+          </View>
+        )}
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
@@ -412,6 +518,13 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginRight: 16,
     width: 60,
+  },
+  frequencyLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.textSecondary,
+    marginTop: 12,
+    marginBottom: 8,
   },
   bottomSpacer: {
     height: 32,

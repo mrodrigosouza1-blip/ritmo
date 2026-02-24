@@ -140,6 +140,29 @@ export async function setSmartBasicEnabled(value: boolean): Promise<void> {
   await setSetting(KEYS.smartBasic, value);
 }
 
+export type SmartFrequency = 'never' | 'once_per_day' | 'only_near_goal';
+
+const KEYS_FREQ = 'notifications.smart.frequency' as const;
+const KEYS_SMART_HOUR = 'notifications.smart.defaultHour' as const;
+
+export async function getSmartFrequency(): Promise<SmartFrequency> {
+  const v = await getSetting(KEYS_FREQ, 'once_per_day');
+  if (v === 'never' || v === 'once_per_day' || v === 'only_near_goal') return v;
+  return 'once_per_day';
+}
+
+export async function setSmartFrequency(value: SmartFrequency): Promise<void> {
+  await setSetting(KEYS_FREQ, value);
+}
+
+export async function getSmartDefaultHour(): Promise<string> {
+  return getSetting(KEYS_SMART_HOUR, '19:30');
+}
+
+export async function setSmartDefaultHour(value: string): Promise<void> {
+  await setSetting(KEYS_SMART_HOUR, value);
+}
+
 export async function getSmartPremiumEnabled(): Promise<boolean> {
   const db = await getDatabase();
   const [newRow, oldRow] = await Promise.all([
