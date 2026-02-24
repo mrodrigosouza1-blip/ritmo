@@ -1,0 +1,5 @@
+# Force EAS to run prebuild and regenerate ios/ with config plugins.
+# Without this, if ios/ is committed, EAS skips prebuild and never runs
+# withDisableBundleSigning / withRitmoWidgetXcode — causing Xcode 14
+# resource bundle signing errors.
+ios/

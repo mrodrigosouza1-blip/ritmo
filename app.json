@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Ritmo",
+    "name": "Ritmo – Rotina e Metas",
     "slug": "Ritmo",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -16,6 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.locione.ritmo",
+      "appleTeamId": "5B679SRYK7",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       },

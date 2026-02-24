@@ -129,7 +129,10 @@ function addRitmoWidgetTarget(config) {
   if (!project.attributes.TargetAttributes) {
     project.attributes.TargetAttributes = {};
   }
-  project.attributes.TargetAttributes[target.uuid] = { LastSwiftMigration: 1250 };
+  project.attributes.TargetAttributes[target.uuid] = {
+    LastSwiftMigration: 1250,
+    DevelopmentTeam: appleTeamId,
+  };
 
   // Target dependency
   xcodeProject.addTargetDependency(xcodeProject.getFirstTarget().uuid, [target.uuid]);
