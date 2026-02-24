@@ -7,7 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "ritmo",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "splash": {
       "image": "./assets/branding/splash-logo.png",
       "resizeMode": "contain",
