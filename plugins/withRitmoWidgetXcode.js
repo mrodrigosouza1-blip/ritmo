@@ -28,11 +28,11 @@ function addRitmoWidgetTarget(config) {
   const platformRoot = config.modRequest.platformProjectRoot;
   const widgetDir = path.join(platformRoot, TARGET_NAME);
 
-  const swiftFilePaths = SWIFT_FILES.map((f) => `${TARGET_NAME}/${f}`);
+  const swiftFilePaths = SWIFT_FILES;
   const allGroupFiles = [
-    ...swiftFilePaths,
-    `${TARGET_NAME}/Info.plist`,
-    `${TARGET_NAME}/${TARGET_NAME}.entitlements`,
+    ...SWIFT_FILES,
+    'Info.plist',
+    `${TARGET_NAME}.entitlements`,
   ];
   const xcodeProject = config.modResults;
 
