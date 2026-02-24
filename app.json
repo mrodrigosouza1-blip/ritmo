@@ -43,6 +43,7 @@
     },
     "plugins": [
       "./plugins/withRitmoWidgetNative",
+      "./plugins/withDisableBundleSigning",
       "expo-router",
       "@react-native-community/datetimepicker"
     ],
