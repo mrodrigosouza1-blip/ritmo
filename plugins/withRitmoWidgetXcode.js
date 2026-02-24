@@ -4,7 +4,23 @@ const path = require('path');
 const TARGET_NAME = 'RitmoWidget';
 const SWIFT_FILES = ['RitmoWidget.swift', 'SnapshotModel.swift', 'SnapshotReader.swift'];
 
+function getAppleTeamId(config) {
+  const teamId =
+    config.ios?.appleTeamId ||
+    process.env.APPLE_TEAM_ID ||
+    '';
+  const trimmed = String(teamId).trim();
+  if (!trimmed) {
+    throw new Error(
+      '[withRitmoWidgetXcode] Apple Team ID is required for widget signing (Xcode 14+). ' +
+        'Set expo.ios.appleTeamId in app.json or APPLE_TEAM_ID environment variable (e.g. in EAS secrets).'
+    );
+  }
+  return trimmed;
+}
+
 function addRitmoWidgetTarget(config) {
+  const appleTeamId = getAppleTeamId(config);
   const bundleIdentifier = config.ios?.bundleIdentifier
     ? `${config.ios.bundleIdentifier}.${TARGET_NAME}`
     : `com.locione.ritmo.${TARGET_NAME}`;
@@ -45,6 +61,8 @@ function addRitmoWidgetTarget(config) {
         MARKETING_VERSION: `"${marketingVersion}"`,
         SWIFT_OPTIMIZATION_LEVEL: '"-Onone"',
         CODE_SIGN_ENTITLEMENTS: `"${TARGET_NAME}/${TARGET_NAME}.entitlements"`,
+        CODE_SIGN_STYLE: '"Automatic"',
+        DEVELOPMENT_TEAM: `"${appleTeamId}"`,
         APPLICATION_EXTENSION_API_ONLY: '"YES"',
       },
     },
@@ -64,6 +82,8 @@ function addRitmoWidgetTarget(config) {
         INFOPLIST_KEY_NSHumanReadableCopyright: '""',
         MARKETING_VERSION: `"${marketingVersion}"`,
         CODE_SIGN_ENTITLEMENTS: `"${TARGET_NAME}/${TARGET_NAME}.entitlements"`,
+        CODE_SIGN_STYLE: '"Automatic"',
+        DEVELOPMENT_TEAM: `"${appleTeamId}"`,
         APPLICATION_EXTENSION_API_ONLY: '"YES"',
       },
     },
